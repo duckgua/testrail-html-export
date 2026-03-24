@@ -6,8 +6,6 @@ interface HtmlContentProps {
 }
 
 function rewriteImageUrls(html: string): string {
-  const base = (process.env.NEXT_PUBLIC_TESTRAIL_BASE_URL ?? '').replace(/\/$/, '')
-
   // Match src="..." with double quotes (TestRail always uses double quotes)
   return html.replace(/src="([^"]+)"/gi, (_, src: string) => {
     // Skip data URIs and already-proxied paths
@@ -16,13 +14,13 @@ function rewriteImageUrls(html: string): string {
     // Strip URL fragment (#_t=... cache-buster added by TestRail) – not needed for server fetch
     const srcClean = src.split('#')[0]
 
-    // Build full absolute URL
-    const fullUrl = /^https?:\/\//i.test(srcClean)
-      ? srcClean
-      : `${base}/${srcClean.replace(/^\//, '')}`
+    // Absolute URL (https://...) → pass as ?url= for SSRF-protected proxy fetch
+    // Relative path (index.php?/attachments/...) → pass as ?path= and let the
+    // server-side proxy prepend TESTRAIL_BASE_URL. This avoids any NEXT_PUBLIC_ env var.
+    const proxyUrl = /^https?:\/\//i.test(srcClean)
+      ? `/api/testrail/image-proxy?url=${encodeURIComponent(srcClean)}`
+      : `/api/testrail/image-proxy?path=${encodeURIComponent(srcClean)}`
 
-    const proxyUrl = `/api/testrail/image-proxy?url=${encodeURIComponent(fullUrl)}`
-    console.log('[HtmlContent] rewriting src:', src, '->', proxyUrl)
     return `src="${proxyUrl}"`
   })
 }
