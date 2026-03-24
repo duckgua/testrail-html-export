@@ -12,7 +12,7 @@ export default async function UnauthorizedPage() {
           你的帳號（{session?.user?.email ?? '未知'}）沒有存取此 Dashboard 的權限。
         </p>
         <p className="text-gray-400 text-xs mb-8">
-          請使用公司 @17.media 帳號登入，或聯絡管理員申請存取權限。
+          請聯絡管理員申請存取權限。
         </p>
 
         <div className="flex flex-col gap-3">

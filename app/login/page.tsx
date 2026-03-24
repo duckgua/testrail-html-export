@@ -20,7 +20,7 @@ export default async function LoginPage() {
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
           <h2 className="text-lg font-semibold text-gray-900 mb-1">登入以繼續</h2>
           <p className="text-sm text-gray-500 mb-6">
-            請使用公司 Google 帳號（@17.media）登入
+            請使用授權的 Google 帳號登入
           </p>
 
           <form

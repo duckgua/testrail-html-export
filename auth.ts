@@ -1,12 +1,18 @@
 import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
 
-const ALLOWED_DOMAIN = '@17.media'
-const ALLOWED_EMAILS = new Set(['ff63945@gmail.com'])
+const ADMIN_EMAIL = 'ff63945@gmail.com'
 
 function isAllowed(email: string | null | undefined): boolean {
   if (!email) return false
-  return email.endsWith(ALLOWED_DOMAIN) || ALLOWED_EMAILS.has(email)
+  // Admin is always allowed
+  if (email === ADMIN_EMAIL) return true
+  // Additional emails stored in Vercel env var as comma-separated list
+  const extra = (process.env.ALLOWED_EMAILS ?? '')
+    .split(',')
+    .map(e => e.trim().toLowerCase())
+    .filter(Boolean)
+  return extra.includes(email.toLowerCase())
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
