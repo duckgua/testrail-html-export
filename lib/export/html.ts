@@ -203,16 +203,16 @@ function renderProgressBar(run: Run): string {
     .join('')
 
   const labels = [
-    { cls: 'pb-passed', label: 'Passed', count: run.passed_count },
-    { cls: 'pb-failed', label: 'Failed', count: run.failed_count },
-    { cls: 'pb-blocked', label: 'Blocked', count: run.blocked_count },
-    { cls: 'pb-retest', label: 'Retest', count: run.retest_count },
-    { cls: 'pb-untested', label: 'Untested', count: run.untested_count },
+    { pbCls: 'pb-passed', lblCls: 'lbl-passed', icon: '✓', label: 'Passed', count: run.passed_count },
+    { pbCls: 'pb-failed', lblCls: 'lbl-failed', icon: '✗', label: 'Failed', count: run.failed_count },
+    { pbCls: 'pb-blocked', lblCls: 'lbl-blocked', icon: '⊘', label: 'Blocked', count: run.blocked_count },
+    { pbCls: 'pb-retest', lblCls: 'lbl-retest', icon: '↺', label: 'Retest', count: run.retest_count },
+    { pbCls: 'pb-untested', lblCls: 'lbl-untested', icon: '○', label: 'Untested', count: run.untested_count },
   ]
     .filter((s) => s.count > 0)
     .map(
       (s) =>
-        `<span><span class="label-dot" style="background:var(--${s.cls})"></span>${s.label}: ${s.count}</span>`
+        `<span class="${s.lblCls}">${s.icon} ${s.count} ${s.label}</span>`
     )
     .join('')
 
@@ -222,92 +222,84 @@ function renderProgressBar(run: Run): string {
 }
 
 // ── Inline CSS ─────────────────────────────────────────────────────────────────
+// Colors match the platform UI (Tailwind values from ProgressBar + STATUS_MAP)
 
 const STYLES = `
 :root {
-  --pb-passed: #22c55e; --pb-failed: #ef4444;
-  --pb-blocked: #f59e0b; --pb-retest: #3b82f6; --pb-untested: #cbd5e1;
+  --pb-passed: #22c55e;  /* green-500 */
+  --pb-failed: #ef4444;  /* red-500 */
+  --pb-blocked: #eab308; /* yellow-500 */
+  --pb-retest: #60a5fa;  /* blue-400 */
+  --pb-untested: #f3f4f6;/* gray-100 */
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-       background: #f1f5f9; color: #111827; line-height: 1.5; }
+       background: #f9fafb; color: #111827; line-height: 1.5; }
 .container { max-width: 960px; margin: 24px auto; padding: 0 16px; }
 
-/* ── Header card ── */
-.header-card {
-  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-  border-radius: 16px; padding: 28px; margin-bottom: 20px;
-  box-shadow: 0 4px 20px rgba(37,99,235,.35);
-}
-.header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
-.run-title { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-.run-meta { font-size: 13px; color: rgba(255,255,255,.7); margin-top: 4px; }
-.pass-rate { font-size: 36px; font-weight: 800; color: #fff; white-space: nowrap;
-             background: rgba(255,255,255,.15); border-radius: 12px; padding: 6px 16px; }
+/* ── Header card — white card, same as run detail page ── */
+.header-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px;
+               padding: 24px; margin-bottom: 16px; }
+.header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.run-title { font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+.run-meta { font-size: 13px; color: #9ca3af; margin-top: 4px; }
+.pass-rate { font-size: 28px; font-weight: 700; color: #374151; white-space: nowrap; }
 
-/* ── Progress bar ── */
-.progress-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; }
+/* ── Progress bar — matches ProgressBar component ── */
+.progress-bar { display: flex; height: 10px; width: 100%; overflow: hidden; border-radius: 9999px; background: #f3f4f6; }
 .pb-passed { background: var(--pb-passed); }
 .pb-failed { background: var(--pb-failed); }
 .pb-blocked { background: var(--pb-blocked); }
 .pb-retest { background: var(--pb-retest); }
 .pb-untested { background: var(--pb-untested); }
-.progress-labels { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; font-size: 12px; color: rgba(255,255,255,.75); }
+.progress-labels { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px; font-size: 12px; color: #6b7280; }
 .label-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 3px; vertical-align: middle; }
+.lbl-passed { color: #15803d; } .lbl-failed { color: #b91c1c; }
+.lbl-blocked { color: #a16207; } .lbl-retest { color: #1d4ed8; } .lbl-untested { color: #6b7280; }
 
-/* ── Status badges ── */
-.badge { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-.badge-1 { background: #16a34a; color: #fff; }
-.badge-2 { background: #d97706; color: #fff; }
-.badge-3 { background: #94a3b8; color: #fff; }
-.badge-4 { background: #2563eb; color: #fff; }
-.badge-5 { background: #dc2626; color: #fff; }
+/* ── Status badges — matches STATUS_MAP ── */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.badge-1 { background: #dcfce7; color: #166534; } /* green-100 / green-800 */
+.badge-2 { background: #fef9c3; color: #854d0e; } /* yellow-100 / yellow-800 */
+.badge-3 { background: #f3f4f6; color: #4b5563; } /* gray-100 / gray-600 */
+.badge-4 { background: #dbeafe; color: #1e40af; } /* blue-100 / blue-800 */
+.badge-5 { background: #fee2e2; color: #991b1b; } /* red-100 / red-800 */
 
 /* ── Test case cards ── */
-details {
-  background: white; border: 1px solid #e2e8f0; border-radius: 10px;
-  margin-bottom: 6px; overflow: hidden;
-  border-left: 4px solid #e2e8f0;
-}
-details.status-1 { border-left-color: #22c55e; }
-details.status-2 { border-left-color: #f59e0b; }
-details.status-3 { border-left-color: #94a3b8; }
-details.status-4 { border-left-color: #3b82f6; }
-details.status-5 { border-left-color: #ef4444; }
-details[open] > summary { border-bottom: 1px solid #f1f5f9; }
+details { background: white; border: 1px solid #e5e7eb; border-radius: 8px;
+          margin-bottom: 6px; overflow: hidden; }
+details[open] > summary { border-bottom: 1px solid #f3f4f6; }
 summary { padding: 10px 14px; cursor: pointer; display: flex; align-items: center;
           gap: 8px; list-style: none; user-select: none; }
 summary::-webkit-details-marker { display: none; }
-summary:hover { background: #f8fafc; }
-.summary-arrow { width: 14px; height: 14px; color: #94a3b8; flex-shrink: 0; transition: transform .2s; }
+summary:hover { background: #f9fafb; }
+.summary-arrow { width: 14px; height: 14px; color: #9ca3af; flex-shrink: 0; transition: transform .2s; }
 details[open] .summary-arrow { transform: rotate(90deg); }
-.case-title { flex: 1; font-size: 14px; font-weight: 500; color: #1e293b; min-width: 0; }
-.case-meta { font-size: 12px; color: #94a3b8; white-space: nowrap; margin-left: 8px; }
-.case-detail { padding: 16px; background: #fafbfc; }
+.case-title { flex: 1; font-size: 14px; font-weight: 500; color: #111827; min-width: 0; }
+.case-meta { font-size: 12px; color: #9ca3af; white-space: nowrap; margin-left: 8px; }
+.case-detail { padding: 16px; }
 .section-block { margin-bottom: 14px; }
-.section-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;
-                 letter-spacing: .06em; margin-bottom: 6px; }
+.section-label { font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase;
+                 letter-spacing: .05em; margin-bottom: 6px; }
 .html-content { font-size: 13px; color: #374151; line-height: 1.65; }
-.html-content img { max-width: 100%; border-radius: 6px; margin: 6px 0; display: block;
-                    box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.html-content img { max-width: 100%; border-radius: 4px; margin: 4px 0; display: block; }
 .html-content p { margin-bottom: 4px; }
 .html-content ul, .html-content ol { padding-left: 18px; margin-bottom: 4px; }
 
 /* ── Table ── */
-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px;
-        border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-th { background: #1e40af; color: #fff; padding: 9px 14px; text-align: left; font-weight: 600;
-     font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
-td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; color: #374151; }
-tr:nth-child(even) td { background: #f8faff; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
+th { background: #f9fafb; padding: 7px 12px; text-align: left; font-weight: 600;
+     font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .05em;
+     border-bottom: 1px solid #e5e7eb; }
+td { padding: 9px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: top; color: #374151; }
 tr:last-child td { border-bottom: none; }
 
 /* ── Comment box ── */
-.comment-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+.comment-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;
                padding: 10px 12px; margin-top: 12px; font-size: 13px; color: #92400e; }
 
 /* ── Footer ── */
-.footer { text-align: center; font-size: 12px; color: #94a3b8; padding: 28px 0 16px; }
+.footer { text-align: center; font-size: 12px; color: #9ca3af; padding: 28px 0 16px; }
 `
 
 // ── Main entry point ───────────────────────────────────────────────────────────
@@ -387,13 +379,13 @@ export async function generateRunHtml(data: ExportData): Promise<string> {
 
   const progressHtml = renderProgressBar(run)
   const completedBadge = run.is_completed
-    ? '<span style="background:rgba(255,255,255,.2);color:#fff;border-radius:9999px;padding:2px 8px;font-size:11px;font-weight:600;margin-left:8px">已完成</span>'
+    ? '<span style="background:#dcfce7;color:#166534;border-radius:9999px;padding:2px 8px;font-size:11px;font-weight:600;margin-left:8px">已完成</span>'
     : ''
   const refsHtml = run.refs
-    ? `<span style="margin-left:8px;font-size:12px;color:rgba(255,255,255,.6)">Refs: ${esc(run.refs)}</span>`
+    ? `<span style="margin-left:8px;font-size:12px;color:#6b7280">Refs: ${esc(run.refs)}</span>`
     : ''
   const descHtml = run.description
-    ? `<div class="html-content" style="margin-top:8px;font-size:13px;color:rgba(255,255,255,.75)">${run.description}</div>`
+    ? `<div class="html-content" style="margin-top:8px;font-size:13px;color:#4b5563">${run.description}</div>`
     : ''
 
   const html = `<!DOCTYPE html>
