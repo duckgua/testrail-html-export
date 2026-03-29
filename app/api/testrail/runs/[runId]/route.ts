@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getProjects } from '@/lib/testrail/api'
+import { getRun } from '@/lib/testrail/api'
 import { extractCredentials } from '@/lib/testrail/credentials'
 
-export async function GET(req: NextRequest) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ runId: string }> }
+) {
   const creds = extractCredentials(req)
   if (!creds) return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
   try {
-    const projects = await getProjects(creds)
-    return NextResponse.json(projects)
+    const { runId } = await params
+    const id = Number(runId)
+    if (isNaN(id)) return NextResponse.json({ error: 'Invalid runId' }, { status: 400 })
+    const run = await getRun(id, creds)
+    return NextResponse.json(run)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json({ error: message }, { status: 502 })

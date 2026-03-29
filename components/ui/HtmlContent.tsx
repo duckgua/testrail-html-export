@@ -1,25 +1,28 @@
 'use client'
 
+import { useCredentials } from '@/contexts/CredentialsContext'
+
 interface HtmlContentProps {
   html: string | null | undefined
   className?: string
 }
 
-function rewriteImageUrls(html: string): string {
+function rewriteImageUrls(html: string, baseUrl: string, email: string, apiKey: string): string {
   // Match src="..." with double quotes (TestRail always uses double quotes)
   return html.replace(/src="([^"]+)"/gi, (_, src: string) => {
     // Skip data URIs and already-proxied paths
     if (src.startsWith('data:') || src.startsWith('/api/')) return `src="${src}"`
 
-    // Strip URL fragment (#_t=... cache-buster added by TestRail) – not needed for server fetch
+    // Strip URL fragment (#_t=... cache-buster added by TestRail)
     const srcClean = src.split('#')[0]
 
-    // Absolute URL (https://...) → pass as ?url= for SSRF-protected proxy fetch
-    // Relative path (index.php?/attachments/...) → pass as ?path= and let the
-    // server-side proxy prepend TESTRAIL_BASE_URL. This avoids any NEXT_PUBLIC_ env var.
+    const credParams = `tr_url=${encodeURIComponent(baseUrl)}&tr_email=${encodeURIComponent(email)}&tr_key=${encodeURIComponent(apiKey)}`
+
+    // Absolute URL → pass as ?url=
+    // Relative path → pass as ?path=
     const proxyUrl = /^https?:\/\//i.test(srcClean)
-      ? `/api/testrail/image-proxy?url=${encodeURIComponent(srcClean)}`
-      : `/api/testrail/image-proxy?path=${encodeURIComponent(srcClean)}`
+      ? `/api/testrail/image-proxy?url=${encodeURIComponent(srcClean)}&${credParams}`
+      : `/api/testrail/image-proxy?path=${encodeURIComponent(srcClean)}&${credParams}`
 
     return `src="${proxyUrl}"`
   })
@@ -31,8 +34,14 @@ function rewriteImageUrls(html: string): string {
  * Images are proxied through /api/testrail/image-proxy to add Basic Auth.
  */
 export default function HtmlContent({ html, className = '' }: HtmlContentProps) {
+  const { credentials } = useCredentials()
+
   if (!html) return null
-  const proxiedHtml = rewriteImageUrls(html)
+
+  const proxiedHtml = credentials
+    ? rewriteImageUrls(html, credentials.baseUrl, credentials.email, credentials.apiKey)
+    : html
+
   return (
     <div
       className={`prose prose-sm max-w-none text-gray-800

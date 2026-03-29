@@ -1,13 +1,23 @@
-import { Suspense } from 'react'
-import { getProjects } from '@/lib/testrail/api'
+'use client'
+
+import { useEffect, useState, Suspense } from 'react'
+import { useCredentials } from '@/contexts/CredentialsContext'
+import { trHeaders } from '@/lib/testrail/credentials'
 import SearchBar from '@/components/search/SearchBar'
 import SearchResults from '@/components/search/SearchResults'
 import Spinner from '@/components/ui/Spinner'
 
-export const dynamic = 'force-dynamic'
+export default function SearchPage() {
+  const { credentials } = useCredentials()
+  const [projects, setProjects] = useState<{ id: number; name: string }[]>([])
 
-export default async function SearchPage() {
-  const projects = await getProjects()
+  useEffect(() => {
+    if (!credentials) return
+    fetch('/api/testrail/projects', { headers: trHeaders(credentials) })
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setProjects(data.map((p: { id: number; name: string }) => ({ id: p.id, name: p.name }))))
+      .catch(() => null)
+  }, [credentials])
 
   return (
     <div>
@@ -18,7 +28,7 @@ export default async function SearchPage() {
 
       <div className="mb-6">
         <Suspense>
-          <SearchBar projects={projects.map((p) => ({ id: p.id, name: p.name }))} />
+          <SearchBar projects={projects} />
         </Suspense>
       </div>
 

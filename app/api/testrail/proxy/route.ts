@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { extractCredentials } from '@/lib/testrail/credentials'
 
 export async function GET(req: NextRequest) {
   const urlParam = req.nextUrl.searchParams.get('url')
@@ -8,15 +9,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing url or path parameter' }, { status: 400 })
   }
 
-  const baseUrl = process.env.TESTRAIL_BASE_URL
-  const email = process.env.TESTRAIL_EMAIL
-  const apiKey = process.env.TESTRAIL_API_KEY
-
-  if (!baseUrl || !email || !apiKey) {
-    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+  const creds = extractCredentials(req)
+  if (!creds) {
+    return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
   }
 
-  const normalizedBase = baseUrl.replace(/\/$/, '')
+  const normalizedBase = creds.baseUrl.replace(/\/$/, '')
 
   let targetUrl: string
   if (urlParam) {
@@ -31,14 +29,13 @@ export async function GET(req: NextRequest) {
     targetUrl = `${normalizedBase}${cleanPath}`
   }
 
-  const authToken = Buffer.from(`${email}:${apiKey}`).toString('base64')
+  const authToken = Buffer.from(`${creds.email}:${creds.apiKey}`).toString('base64')
 
   try {
     const upstream = await fetch(targetUrl, {
       headers: {
         Authorization: `Basic ${authToken}`,
       },
-      // Don't cache in Next.js fetch cache — we handle it via response headers
       cache: 'no-store',
     })
 

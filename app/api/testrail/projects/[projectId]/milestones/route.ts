@@ -1,15 +1,18 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getMilestones } from '@/lib/testrail/api'
+import { extractCredentials } from '@/lib/testrail/credentials'
 
 export async function GET(
-  _req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
+  const creds = extractCredentials(req)
+  if (!creds) return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
   try {
     const { projectId } = await params
     const id = Number(projectId)
     if (isNaN(id)) return NextResponse.json({ error: 'Invalid projectId' }, { status: 400 })
-    const milestones = await getMilestones(id)
+    const milestones = await getMilestones(id, creds)
     return NextResponse.json(milestones)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'

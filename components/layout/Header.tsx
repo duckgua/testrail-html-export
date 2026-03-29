@@ -1,10 +1,10 @@
-import Link from 'next/link'
-import Image from 'next/image'
-import { auth, signOut } from '@/auth'
+'use client'
 
-export default async function Header() {
-  const session = await auth()
-  const user = session?.user
+import Link from 'next/link'
+import { useCredentials } from '@/contexts/CredentialsContext'
+
+export default function Header() {
+  const { clearCredentials } = useCredentials()
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
@@ -35,41 +35,15 @@ export default async function Header() {
               </Link>
             </nav>
 
-            {/* User info + sign out */}
-            {user && (
-              <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-200">
-                {user.image ? (
-                  <Image
-                    src={user.image}
-                    alt={user.name ?? ''}
-                    width={28}
-                    height={28}
-                    className="rounded-full"
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-semibold">
-                    {user.name?.[0] ?? user.email?.[0] ?? '?'}
-                  </div>
-                )}
-                <span className="text-sm text-gray-700 hidden md:inline max-w-[140px] truncate">
-                  {user.name ?? user.email}
-                </span>
-                <form
-                  action={async () => {
-                    'use server'
-                    await signOut({ redirectTo: '/login' })
-                  }}
-                >
-                  <button
-                    type="submit"
-                    className="text-xs text-gray-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50"
-                    title="登出"
-                  >
-                    登出
-                  </button>
-                </form>
-              </div>
-            )}
+            <div className="flex items-center ml-2 pl-2 border-l border-gray-200">
+              <button
+                onClick={clearCredentials}
+                className="text-xs text-gray-400 hover:text-blue-600 transition-colors px-2 py-1 rounded hover:bg-blue-50"
+                title="更換 TestRail 憑證"
+              >
+                更換憑證
+              </button>
+            </div>
           </div>
         </div>
       </div>

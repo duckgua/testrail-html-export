@@ -1,34 +1,76 @@
-import { getProject, getMilestones, getRuns } from '@/lib/testrail/api'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import { useCredentials } from '@/contexts/CredentialsContext'
+import { trHeaders } from '@/lib/testrail/credentials'
 import MilestoneSection from '@/components/runs/MilestoneSection'
 import Breadcrumb from '@/components/layout/Breadcrumb'
 import EmptyState from '@/components/ui/EmptyState'
 import HtmlContent from '@/components/ui/HtmlContent'
-import type { Run, Milestone } from '@/lib/testrail/types'
+import Spinner from '@/components/ui/Spinner'
+import type { Run, Milestone, Project } from '@/lib/testrail/types'
 
-export const dynamic = 'force-dynamic'
-
-interface Props {
-  params: Promise<{ projectId: string }>
-}
-
-export default async function ProjectPage({ params }: Props) {
-  const { projectId } = await params
+export default function ProjectPage() {
+  const { projectId } = useParams<{ projectId: string }>()
   const id = Number(projectId)
+  const { credentials } = useCredentials()
 
-  const [project, milestones, runs] = await Promise.all([
-    getProject(id),
-    getMilestones(id),
-    getRuns(id),
-  ])
+  const [project, setProject] = useState<Project | null>(null)
+  const [milestones, setMilestones] = useState<Milestone[]>([])
+  const [runs, setRuns] = useState<Run[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!credentials) return
+    setLoading(true)
+    setError(null)
+
+    const h = trHeaders(credentials)
+    Promise.all([
+      fetch(`/api/testrail/projects/${id}/runs`, { headers: h }).then((r) => r.json()),
+      fetch(`/api/testrail/projects/${id}/milestones`, { headers: h }).then((r) => r.json()),
+    ])
+      .then(([runsData, milestonesData]) => {
+        // Derive minimal project info from runs if available
+        setRuns(Array.isArray(runsData) ? runsData : [])
+        setMilestones(Array.isArray(milestonesData) ? milestonesData : [])
+        // Fetch project details separately for the name/announcement
+        return fetch(`/api/testrail/projects`, { headers: h })
+          .then((r) => r.json())
+          .then((all) => {
+            const p = all.find((p: Project) => p.id === id)
+            if (p) setProject(p)
+          })
+          .catch(() => null)
+      })
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [credentials, id])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-24">
+        <Spinner size="lg" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-red-600">載入失敗：{error}</p>
+      </div>
+    )
+  }
 
   // Group runs by milestone_id
   const runsByMilestone = new Map<number | null, Run[]>()
   runsByMilestone.set(null, [])
-
   for (const milestone of milestones) {
     runsByMilestone.set(milestone.id, [])
   }
-
   for (const run of runs) {
     const key = run.milestone_id ?? null
     if (!runsByMilestone.has(key)) {
@@ -44,19 +86,20 @@ export default async function ProjectPage({ params }: Props) {
   })
 
   const ungroupedRuns = runsByMilestone.get(null) ?? []
+  const projectName = project?.name ?? `Project ${id}`
 
   return (
     <div>
       <Breadcrumb
         items={[
           { label: 'Projects', href: '/' },
-          { label: project.name },
+          { label: projectName },
         ]}
       />
 
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
-        {project.announcement && (
+        <h1 className="text-2xl font-bold text-gray-900">{projectName}</h1>
+        {project?.announcement && (
           <HtmlContent html={project.announcement} className="text-gray-500 mt-1" />
         )}
         <p className="text-sm text-gray-400 mt-1">

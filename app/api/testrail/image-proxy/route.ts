@@ -26,13 +26,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing url or path parameter' }, { status: 400 })
   }
 
-  const baseUrl = process.env.TESTRAIL_BASE_URL
-  const email = process.env.TESTRAIL_EMAIL
-  const apiKey = process.env.TESTRAIL_API_KEY
+  // Credentials can come from headers (X-TR-*) or query params (tr_url, tr_email, tr_key)
+  const baseUrl = req.headers.get('X-TR-Url') ?? req.nextUrl.searchParams.get('tr_url')
+  const email = req.headers.get('X-TR-Email') ?? req.nextUrl.searchParams.get('tr_email')
+  const apiKey = req.headers.get('X-TR-Key') ?? req.nextUrl.searchParams.get('tr_key')
 
   if (!baseUrl || !email || !apiKey) {
-    console.error('[image-proxy] missing env vars — baseUrl:', baseUrl, 'email:', email, 'apiKey set:', !!apiKey)
-    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+    return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
   }
 
   const normalizedBase = baseUrl.replace(/\/$/, '')
@@ -41,7 +41,6 @@ export async function GET(req: NextRequest) {
   let rawUrl: string
   if (urlParam) {
     if (!urlParam.startsWith(normalizedBase)) {
-      console.error('[image-proxy] SSRF blocked:', urlParam)
       return NextResponse.json({ error: 'URL not allowed' }, { status: 400 })
     }
     rawUrl = urlParam
@@ -52,11 +51,7 @@ export async function GET(req: NextRequest) {
 
   // Rewrite to REST API URL so Basic Auth (email:api_key) works
   const targetUrl = toRestApiUrl(rawUrl, normalizedBase)
-
   const authToken = Buffer.from(`${email}:${apiKey}`).toString('base64')
-
-  console.log('[image-proxy] raw url:', rawUrl)
-  console.log('[image-proxy] fetching:', targetUrl)
 
   try {
     const upstream = await fetch(targetUrl, {
@@ -67,16 +62,12 @@ export async function GET(req: NextRequest) {
     })
 
     const contentType = upstream.headers.get('content-type') ?? 'application/octet-stream'
-    console.log('[image-proxy] status:', upstream.status, '| content-type:', contentType)
 
     if (!upstream.ok) {
-      const text = await upstream.text()
-      console.error('[image-proxy] error body (first 300):', text.slice(0, 300))
       return new NextResponse(null, { status: upstream.status })
     }
 
     const body = await upstream.arrayBuffer()
-    console.log('[image-proxy] success — bytes:', body.byteLength)
 
     return new NextResponse(body, {
       status: 200,

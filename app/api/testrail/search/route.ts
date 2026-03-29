@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getProjects, getSuites, getCases, getSections } from '@/lib/testrail/api'
+import { extractCredentials } from '@/lib/testrail/credentials'
 import type { Case, Section, Suite, Project } from '@/lib/testrail/types'
+import type { TestrailCredentials } from '@/lib/testrail/credentials'
 
 export interface SearchResult {
   caseId: number
@@ -14,6 +16,9 @@ export interface SearchResult {
 }
 
 export async function GET(req: NextRequest) {
+  const creds = extractCredentials(req)
+  if (!creds) return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
+
   const query = req.nextUrl.searchParams.get('q')?.trim() ?? ''
   const projectIdParam = req.nextUrl.searchParams.get('projectId')
 
@@ -22,13 +27,13 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const projects = await getProjects()
+    const projects = await getProjects(creds)
     const targetProjects = projectIdParam
       ? projects.filter((p) => p.id === Number(projectIdParam))
       : projects.slice(0, 5) // limit to first 5 to avoid timeout
 
     const results = await Promise.all(
-      targetProjects.map((project) => searchInProject(project, query))
+      targetProjects.map((project) => searchInProject(project, query, creds))
     )
 
     const flat = results.flat().slice(0, 100) // max 100 results
@@ -67,9 +72,10 @@ function caseSearchText(c: Case): string {
 
 async function searchInProject(
   project: Project,
-  query: string
+  query: string,
+  creds: TestrailCredentials
 ): Promise<SearchResult[]> {
-  const suites = await getSuites(project.id)
+  const suites = await getSuites(project.id, creds)
   if (suites.length === 0) return []
 
   const lowerQuery = query.toLowerCase()
@@ -77,8 +83,8 @@ async function searchInProject(
   const suiteResults = await Promise.all(
     suites.map(async (suite: Suite) => {
       const [cases, sections] = await Promise.all([
-        getCases(project.id, suite.id),
-        getSections(project.id, suite.id),
+        getCases(project.id, creds, suite.id),
+        getSections(project.id, creds, suite.id),
       ])
 
       const sectionMap = new Map<number, Section>(

@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useCredentials } from '@/contexts/CredentialsContext'
+import { trHeaders } from '@/lib/testrail/credentials'
 import Spinner from '@/components/ui/Spinner'
 import EmptyState from '@/components/ui/EmptyState'
 import type { SearchResult } from '@/app/api/testrail/search/route'
@@ -11,13 +13,14 @@ export default function SearchResults() {
   const searchParams = useSearchParams()
   const query = searchParams.get('q') ?? ''
   const projectId = searchParams.get('projectId') ?? ''
+  const { credentials } = useCredentials()
 
   const [results, setResults] = useState<SearchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (query.length < 3) {
+    if (query.length < 3 || !credentials) {
       setResults([])
       return
     }
@@ -28,7 +31,7 @@ export default function SearchResults() {
     const params = new URLSearchParams({ q: query })
     if (projectId) params.set('projectId', projectId)
 
-    fetch(`/api/testrail/search?${params}`)
+    fetch(`/api/testrail/search?${params}`, { headers: trHeaders(credentials) })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
@@ -39,7 +42,7 @@ export default function SearchResults() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setIsLoading(false))
-  }, [query, projectId])
+  }, [query, projectId, credentials])
 
   if (query.length > 0 && query.length < 3) {
     return <p className="text-sm text-gray-400 text-center py-8">請輸入至少 3 個字元</p>

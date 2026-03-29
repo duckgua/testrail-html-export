@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCase } from '@/lib/testrail/api'
+import { extractCredentials } from '@/lib/testrail/credentials'
 
 // Debug route: GET /api/debug/case?id=<caseId>
 // Returns the raw TestRail case fields so we can inspect the actual image src format.
 // Remove this file after debugging is complete.
 export async function GET(req: NextRequest) {
+  const creds = extractCredentials(req)
+  if (!creds) return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
+
   const id = Number(req.nextUrl.searchParams.get('id'))
   if (!id) return NextResponse.json({ error: 'Missing ?id=' }, { status: 400 })
 
-  const c = await getCase(id)
+  const c = await getCase(id, creds)
 
   // Return only the HTML fields that might contain images
   return NextResponse.json({

@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { extractCredentials } from '@/lib/testrail/credentials'
 import { getRun, getTests, getResultsForRun, getUsers, getCase } from '@/lib/testrail/api'
 import { generateRunHtml } from '@/lib/export/html'
 import type { Result, TestWithResult, Case } from '@/lib/testrail/types'
+import type { TestrailCredentials } from '@/lib/testrail/credentials'
 
 // Fetch cases in batches to avoid overwhelming the TestRail API
 async function fetchCasesInBatches(
   caseIds: number[],
+  credentials: TestrailCredentials,
   batchSize = 10
 ): Promise<Map<number, Case>> {
   const unique = [...new Set(caseIds)]
@@ -15,7 +17,7 @@ async function fetchCasesInBatches(
   for (let i = 0; i < unique.length; i += batchSize) {
     const batch = unique.slice(i, i + batchSize)
     const cases = await Promise.all(
-      batch.map((id) => getCase(id).catch(() => null))
+      batch.map((id) => getCase(id, credentials).catch(() => null))
     )
     cases.forEach((c, idx) => {
       if (c) caseMap.set(batch[idx], c)
@@ -30,13 +32,12 @@ function sanitizeFilename(name: string): string {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ runId: string }> }
 ) {
-  // Require login
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const creds = extractCredentials(req)
+  if (!creds) {
+    return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
   }
 
   const { runId } = await params
@@ -46,10 +47,10 @@ export async function GET(
   try {
     // Fetch base data in parallel
     const [run, tests, results, users] = await Promise.all([
-      getRun(rid),
-      getTests(rid),
-      getResultsForRun(rid),
-      getUsers(),
+      getRun(rid, creds),
+      getTests(rid, creds),
+      getResultsForRun(rid, creds),
+      getUsers(creds),
     ])
 
     // Merge tests with latest results
@@ -67,13 +68,13 @@ export async function GET(
 
     // Fetch all case details (batched)
     const caseIds = testsWithResults.map((t) => t.case_id)
-    const caseMap = await fetchCasesInBatches(caseIds)
+    const caseMap = await fetchCasesInBatches(caseIds, creds)
 
     // Build user map
     const usersMap = new Map<number, string>(users.map((u) => [u.id, u.name]))
 
     // Generate HTML
-    const html = await generateRunHtml({ run, testsWithResults, caseMap, usersMap })
+    const html = await generateRunHtml({ run, testsWithResults, caseMap, usersMap, credentials: creds })
     const filename = `run-${sanitizeFilename(run.name)}.html`
 
     return new Response(html, {
