@@ -4,6 +4,8 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import type { TestrailCredentials } from '@/lib/testrail/credentials'
 
 const SESSION_KEY = 'tr_creds'
+// HttpOnly cookie name — set/cleared via API route
+const COOKIE_SET_API = '/api/session'
 
 interface CredentialsContextValue {
   credentials: TestrailCredentials | null
@@ -30,17 +32,25 @@ export function CredentialsProvider({ children }: { children: ReactNode }) {
     setHydrated(true)
   }, [])
 
-  function setCredentials(creds: TestrailCredentials) {
+  async function setCredentials(creds: TestrailCredentials) {
+    // Store in sessionStorage for React state (tab-scoped)
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(creds))
     setCredentialsState(creds)
+    // Also set an HttpOnly session cookie so image-proxy doesn't need URL params
+    await fetch(COOKIE_SET_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(creds),
+    }).catch(() => null)
   }
 
-  function clearCredentials() {
+  async function clearCredentials() {
     sessionStorage.removeItem(SESSION_KEY)
     setCredentialsState(null)
+    // Clear the HttpOnly cookie
+    await fetch(COOKIE_SET_API, { method: 'DELETE' }).catch(() => null)
   }
 
-  // Avoid rendering children before hydration to prevent sessionStorage mismatch
   if (!hydrated) return null
 
   return (

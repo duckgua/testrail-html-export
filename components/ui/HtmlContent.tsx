@@ -1,5 +1,7 @@
 'use client'
 
+import DOMPurify from 'isomorphic-dompurify'
+
 interface HtmlContentProps {
   html: string | null | undefined
   className?: string
@@ -19,6 +21,10 @@ function rewriteImageUrls(html: string): string {
 
 export default function HtmlContent({ html, className = '' }: HtmlContentProps) {
   if (!html) return null
+  const safe = DOMPurify.sanitize(rewriteImageUrls(html), {
+    ADD_TAGS: ['img'],
+    ADD_ATTR: ['src', 'alt', 'title', 'width', 'height'],
+  })
   return (
     <div
       className={`prose prose-sm max-w-none text-gray-800
@@ -26,7 +32,7 @@ export default function HtmlContent({ html, className = '' }: HtmlContentProps) 
         prose-img:max-w-full prose-img:rounded prose-a:text-blue-600
         prose-pre:bg-gray-100 prose-pre:rounded prose-pre:p-2 prose-pre:text-xs
         ${className}`}
-      dangerouslySetInnerHTML={{ __html: rewriteImageUrls(html) }}
+      dangerouslySetInnerHTML={{ __html: safe }}
     />
   )
 }

@@ -15,20 +15,34 @@ export async function testrailFetch<T>(
   }
   const finalUrl = `${baseUrl}/index.php?${queryParts.join('&')}`
 
-  const response = await fetch(finalUrl, {
-    headers: {
-      Authorization: `Basic ${authToken}`,
-      'Content-Type': 'application/json',
-    },
-    cache: 'no-store',
-  })
+  const MAX_RETRIES = 3
+  let lastResponse: Response | undefined
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const response = await fetch(finalUrl, {
+      headers: {
+        Authorization: `Basic ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+    })
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => response.statusText)
-    throw new Error(`TestRail API error ${response.status}: ${errorText}`)
+    if (response.status === 429) {
+      const retryAfter = parseInt(response.headers.get('Retry-After') ?? '5', 10)
+      await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000))
+      lastResponse = response
+      continue
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => response.statusText)
+      throw new Error(`TestRail API error ${response.status}: ${errorText}`)
+    }
+
+    return response.json() as Promise<T>
   }
 
-  return response.json() as Promise<T>
+  const errorText = await lastResponse?.text().catch(() => 'Too Many Requests') ?? 'Too Many Requests'
+  throw new Error(`TestRail API error 429: ${errorText}`)
 }
 
 export async function testrailFetchPaginated<T>(
