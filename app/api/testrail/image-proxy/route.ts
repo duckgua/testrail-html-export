@@ -26,10 +26,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing url or path parameter' }, { status: 400 })
   }
 
-  // Credentials can come from headers (X-TR-*) or query params (tr_url, tr_email, tr_key)
-  const baseUrl = req.headers.get('X-TR-Url') ?? req.nextUrl.searchParams.get('tr_url')
-  const email = req.headers.get('X-TR-Email') ?? req.nextUrl.searchParams.get('tr_email')
-  const apiKey = req.headers.get('X-TR-Key') ?? req.nextUrl.searchParams.get('tr_key')
+  // Credentials: prefer X-TR-* headers, fall back to HttpOnly session cookie
+  let baseUrl = req.headers.get('X-TR-Url')
+  let email = req.headers.get('X-TR-Email')
+  let apiKey = req.headers.get('X-TR-Key')
+
+  if (!baseUrl || !email || !apiKey) {
+    try {
+      const cookie = req.cookies.get('tr_session')?.value
+      if (cookie) {
+        const parsed = JSON.parse(cookie)
+        baseUrl = baseUrl ?? parsed.baseUrl
+        email = email ?? parsed.email
+        apiKey = apiKey ?? parsed.apiKey
+      }
+    } catch {
+      // ignore malformed cookie
+    }
+  }
 
   if (!baseUrl || !email || !apiKey) {
     return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
