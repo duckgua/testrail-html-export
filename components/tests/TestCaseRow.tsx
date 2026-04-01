@@ -9,12 +9,27 @@ import { useCredentials } from '@/contexts/CredentialsContext'
 import { trHeaders } from '@/lib/testrail/credentials'
 import type { TestWithResult, Case } from '@/lib/testrail/types'
 
+const PRIORITY_LABEL: Record<number, string> = {
+  1: 'Low',
+  2: 'Medium',
+  3: 'High',
+  4: 'Critical',
+}
+
+const PRIORITY_CLASS: Record<number, string> = {
+  1: 'text-gray-400',
+  2: 'text-blue-400',
+  3: 'text-orange-400',
+  4: 'text-red-500',
+}
+
 interface TestCaseRowProps {
   test: TestWithResult
   usersMap?: Map<number, string>
+  statusesMap?: Map<number, string>
 }
 
-export default function TestCaseRow({ test, usersMap = new Map() }: TestCaseRowProps) {
+export default function TestCaseRow({ test, usersMap = new Map(), statusesMap }: TestCaseRowProps) {
   const { credentials } = useCredentials()
   const [isExpanded, setIsExpanded] = useState(false)
   const [caseDetail, setCaseDetail] = useState<Case | null>(null)
@@ -47,6 +62,10 @@ export default function TestCaseRow({ test, usersMap = new Map() }: TestCaseRowP
     ? (usersMap.get(assigneeId) ?? `User #${assigneeId}`)
     : null
 
+  const statusLabel = statusesMap?.get(test.status_id)
+  const priorityLabel = PRIORITY_LABEL[test.priority_id]
+  const priorityClass = PRIORITY_CLASS[test.priority_id] ?? 'text-gray-400'
+
   return (
     <div className="border-b border-gray-100 last:border-0">
       <button
@@ -58,7 +77,11 @@ export default function TestCaseRow({ test, usersMap = new Map() }: TestCaseRowP
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge statusId={test.status_id} size="sm" />
+            <Badge statusId={test.status_id} size="sm" label={statusLabel} />
+            <span className="text-xs text-gray-400 font-mono shrink-0">C{test.case_id}</span>
+            {priorityLabel && (
+              <span className={`text-xs font-medium shrink-0 ${priorityClass}`}>{priorityLabel}</span>
+            )}
             <span className="text-sm font-medium text-gray-900 break-words">{test.title}</span>
           </div>
           {comment && (

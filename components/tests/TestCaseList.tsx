@@ -18,9 +18,10 @@ interface FilterTab {
 interface TestCaseListProps {
   tests: TestWithResult[]
   usersMap?: Map<number, string>
+  statusesMap?: Map<number, string>
 }
 
-export default function TestCaseList({ tests, usersMap = new Map() }: TestCaseListProps) {
+export default function TestCaseList({ tests, usersMap = new Map(), statusesMap }: TestCaseListProps) {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
 
   const counts = {
@@ -92,7 +93,7 @@ export default function TestCaseList({ tests, usersMap = new Map() }: TestCaseLi
       ) : (
         <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
           {filtered.map((test) => (
-            <TestCaseRow key={test.id} test={test} usersMap={usersMap} />
+            <TestCaseRow key={test.id} test={test} usersMap={usersMap} statusesMap={statusesMap} />
           ))}
         </div>
       )}

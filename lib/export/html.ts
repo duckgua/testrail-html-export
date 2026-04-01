@@ -11,17 +11,24 @@ export interface ExportData {
   testsWithResults: TestWithResult[]
   caseMap: Map<number, Case>
   usersMap: Map<number, string>
+  statusesMap: Map<number, string>
   credentials: TestrailCredentials
 }
 
-// ── Status helpers ─────────────────────────────────────────────────────────────
+// ── Priority helpers ────────────────────────────────────────────────────────────
 
-const STATUS_LABEL: Record<number, string> = {
-  1: 'Passed',
-  2: 'Blocked',
-  3: 'Untested',
-  4: 'Retest',
-  5: 'Failed',
+const PRIORITY_LABEL: Record<number, string> = {
+  1: 'Low',
+  2: 'Medium',
+  3: 'High',
+  4: 'Critical',
+}
+
+const PRIORITY_COLOR: Record<number, string> = {
+  1: '#9ca3af',
+  2: '#60a5fa',
+  3: '#fb923c',
+  4: '#ef4444',
 }
 
 // ── Image embedding ────────────────────────────────────────────────────────────
@@ -102,6 +109,9 @@ function renderHtmlField(html: string | null | undefined): string {
       ...sanitizeHtml.defaults.allowedAttributes,
       img: ['src', 'alt', 'title', 'width', 'height'],
     },
+    allowedSchemesByTag: {
+      img: ['http', 'https', 'data'],
+    },
   })
   return `<div class="html-content">${safe}</div>`
 }
@@ -136,11 +146,15 @@ function renderStepsTable(steps: CaseStep[]): string {
 function renderTestCase(
   test: TestWithResult,
   caseDetail: Case | undefined,
-  usersMap: Map<number, string>
+  usersMap: Map<number, string>,
+  statusesMap: Map<number, string>
 ): string {
   const statusId = test.status_id
-  const statusLabel = STATUS_LABEL[statusId] ?? `Status ${statusId}`
+  const statusLabel = statusesMap.get(statusId) ?? `Status ${statusId}`
   const assignee = test.assignedto_id ? usersMap.get(test.assignedto_id) : null
+  const priorityId = caseDetail?.priority_id ?? test.priority_id
+  const priorityLabel = PRIORITY_LABEL[priorityId]
+  const priorityColor = PRIORITY_COLOR[priorityId] ?? '#9ca3af'
   const comment = test.latestResult?.comment ?? null
 
   // Steps section
@@ -171,6 +185,10 @@ function renderTestCase(
     ? `<span class="case-meta">${esc(assignee)}</span>`
     : ''
 
+  const priorityHtml = priorityLabel
+    ? `<span class="case-priority" style="color:${priorityColor}">${esc(priorityLabel)}</span>`
+    : ''
+
   return `
   <details class="status-${statusId}">
     <summary>
@@ -178,6 +196,8 @@ function renderTestCase(
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
       </svg>
       <span class="badge badge-${statusId}">${esc(statusLabel)}</span>
+      <span class="case-id">C${test.case_id}</span>
+      ${priorityHtml}
       <span class="case-title">${esc(test.title)}</span>
       ${metaHtml}
     </summary>
@@ -283,6 +303,8 @@ summary:hover { background: #f9fafb; }
 .summary-arrow { width: 14px; height: 14px; color: #9ca3af; flex-shrink: 0; transition: transform .2s; }
 details[open] .summary-arrow { transform: rotate(90deg); }
 .case-title { flex: 1; font-size: 14px; font-weight: 500; color: #111827; min-width: 0; }
+.case-id { font-size: 11px; font-family: monospace; color: #9ca3af; white-space: nowrap; }
+.case-priority { font-size: 11px; font-weight: 600; white-space: nowrap; }
 .case-meta { font-size: 12px; color: #9ca3af; white-space: nowrap; margin-left: 8px; }
 .case-detail { padding: 16px; }
 .section-block { margin-bottom: 14px; }
@@ -312,7 +334,7 @@ tr:last-child td { border-bottom: none; }
 // ── Main entry point ───────────────────────────────────────────────────────────
 
 export async function generateRunHtml(data: ExportData): Promise<string> {
-  const { run, testsWithResults, caseMap, usersMap, credentials } = data
+  const { run, testsWithResults, caseMap, usersMap, statusesMap, credentials } = data
   const { passRate } = computePassRate(run)
   const base = credentials.baseUrl.replace(/\/$/, '')
   const exportDate = new Date().toLocaleDateString('zh-TW', {
@@ -380,7 +402,7 @@ export async function generateRunHtml(data: ExportData): Promise<string> {
           : null,
       }
 
-      return renderTestCase(embeddedTest, embeddedCase, usersMap)
+      return renderTestCase(embeddedTest, embeddedCase, usersMap, statusesMap)
     })
   )
 

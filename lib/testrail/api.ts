@@ -10,6 +10,7 @@ import type {
   Result,
   Case,
   User,
+  Status,
 } from './types'
 
 // ── Projects ────────────────────────────────────────────────────────────────
@@ -95,6 +96,16 @@ export async function getResultsForRun(runId: number, credentials: TestrailCrede
 export async function getUsers(credentials: TestrailCredentials): Promise<User[]> {
   try {
     return await testrailFetchPaginated<User>('get_users', 'users', credentials)
+  } catch {
+    return []
+  }
+}
+
+// ── Statuses ──────────────────────────────────────────────────────────────────
+
+export async function getStatuses(credentials: TestrailCredentials): Promise<Status[]> {
+  try {
+    return await testrailFetch<Status[]>('get_statuses', credentials)
   } catch {
     return []
   }

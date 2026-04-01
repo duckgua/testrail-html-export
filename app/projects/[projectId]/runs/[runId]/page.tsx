@@ -11,7 +11,7 @@ import HtmlContent from '@/components/ui/HtmlContent'
 import Spinner from '@/components/ui/Spinner'
 import { computePassRate } from '@/lib/utils/status'
 import { formatDateTime } from '@/lib/utils/format'
-import type { Result, TestWithResult, Run, Project, User } from '@/lib/testrail/types'
+import type { Result, TestWithResult, Run, Project, User, Status } from '@/lib/testrail/types'
 
 export default function RunPage() {
   const { projectId, runId } = useParams<{ projectId: string; runId: string }>()
@@ -23,6 +23,7 @@ export default function RunPage() {
   const [run, setRun] = useState<Run | null>(null)
   const [testsWithResults, setTestsWithResults] = useState<TestWithResult[]>([])
   const [usersMap, setUsersMap] = useState<Map<number, string>>(new Map())
+  const [statusesMap, setStatusesMap] = useState<Map<number, string>>(new Map())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
@@ -39,8 +40,9 @@ export default function RunPage() {
       fetch(`/api/testrail/runs/${rid}/tests`, { headers: h }).then((r) => r.json()),
       fetch(`/api/testrail/runs/${rid}/results`, { headers: h }).then((r) => r.json()),
       fetch(`/api/testrail/users`, { headers: h }).then((r) => r.ok ? r.json() : []),
+      fetch(`/api/testrail/statuses`, { headers: h }).then((r) => r.ok ? r.json() : []),
     ])
-      .then(([projectData, runData, tests, results, users]: [Project | null, Run, unknown[], Result[], User[]]) => {
+      .then(([projectData, runData, tests, results, users, statuses]: [Project | null, Run, unknown[], Result[], User[], Status[]]) => {
         setProject(projectData)
         setRun(runData)
 
@@ -59,6 +61,7 @@ export default function RunPage() {
         )
 
         setUsersMap(new Map(users.map((u) => [u.id, u.name])))
+        setStatusesMap(new Map(statuses.map((s) => [s.id, s.label])))
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
@@ -179,7 +182,7 @@ export default function RunPage() {
       </div>
 
       {/* Test case list with interactive filter tabs */}
-      <TestCaseList tests={testsWithResults} usersMap={usersMap} />
+      <TestCaseList tests={testsWithResults} usersMap={usersMap} statusesMap={statusesMap} />
     </div>
   )
 }

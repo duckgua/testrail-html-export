@@ -153,6 +153,15 @@ export interface User {
   role_id: number
 }
 
+export interface Status {
+  id: number
+  name: string
+  label: string
+  is_system: boolean
+  is_untested: boolean
+  is_final: boolean
+}
+
 // Paginated response envelope
 export interface PaginatedResponse<T> {
   offset: number
