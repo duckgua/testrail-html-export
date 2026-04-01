@@ -75,8 +75,18 @@ export async function GET(
     const usersMap = new Map<number, string>(users.map((u) => [u.id, u.name]))
     const statusesMap = new Map<number, string>(statuses.map((s) => [s.id, s.label]))
 
+    // Apply sort
+    const sort = req.nextUrl.searchParams.get('sort') ?? 'default'
+    const STATUS_SORT_ORDER: Record<number, number> = { 5: 0, 2: 1, 4: 2, 3: 3, 1: 4 }
+    const sortedTests =
+      sort === 'status'
+        ? [...testsWithResults].sort((a, b) => (STATUS_SORT_ORDER[a.status_id] ?? 99) - (STATUS_SORT_ORDER[b.status_id] ?? 99))
+        : sort === 'priority'
+          ? [...testsWithResults].sort((a, b) => b.priority_id - a.priority_id)
+          : testsWithResults
+
     // Generate HTML
-    const html = await generateRunHtml({ run, testsWithResults, caseMap, usersMap, statusesMap, credentials: creds })
+    const html = await generateRunHtml({ run, testsWithResults: sortedTests, caseMap, usersMap, statusesMap, credentials: creds })
     const filename = `run-${sanitizeFilename(run.name)}.html`
 
     return new Response(html, {

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { useCredentials } from '@/contexts/CredentialsContext'
 import { trHeaders } from '@/lib/testrail/credentials'
-import TestCaseList from '@/components/tests/TestCaseList'
+import TestCaseList, { type SortKey } from '@/components/tests/TestCaseList'
 import ProgressBar from '@/components/ui/ProgressBar'
 import Breadcrumb from '@/components/layout/Breadcrumb'
 import HtmlContent from '@/components/ui/HtmlContent'
@@ -24,6 +24,7 @@ export default function RunPage() {
   const [testsWithResults, setTestsWithResults] = useState<TestWithResult[]>([])
   const [usersMap, setUsersMap] = useState<Map<number, string>>(new Map())
   const [statusesMap, setStatusesMap] = useState<Map<number, string>>(new Map())
+  const [sortBy, setSortBy] = useState<SortKey>('default')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
@@ -71,7 +72,7 @@ export default function RunPage() {
     if (!credentials || !run) return
     setExporting(true)
     try {
-      const res = await fetch(`/api/export/run/${rid}`, { headers: trHeaders(credentials) })
+      const res = await fetch(`/api/export/run/${rid}?sort=${sortBy}`, { headers: trHeaders(credentials) })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -182,7 +183,13 @@ export default function RunPage() {
       </div>
 
       {/* Test case list with interactive filter tabs */}
-      <TestCaseList tests={testsWithResults} usersMap={usersMap} statusesMap={statusesMap} />
+      <TestCaseList
+        tests={testsWithResults}
+        usersMap={usersMap}
+        statusesMap={statusesMap}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+      />
     </div>
   )
 }
