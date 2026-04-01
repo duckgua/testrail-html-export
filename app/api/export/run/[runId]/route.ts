@@ -87,6 +87,7 @@ export async function GET(
     })
   } catch (err) {
     console.error('[export] failed:', err)
-    return NextResponse.json({ error: 'Export failed' }, { status: 500 })
+    const message = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

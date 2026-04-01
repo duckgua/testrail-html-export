@@ -2,7 +2,7 @@ import type { Run, TestWithResult, Case, CaseStep } from '@/lib/testrail/types'
 import type { TestrailCredentials } from '@/lib/testrail/credentials'
 import { formatDateTime } from '@/lib/utils/format'
 import { computePassRate } from '@/lib/utils/status'
-import DOMPurify from 'isomorphic-dompurify'
+import sanitizeHtml from 'sanitize-html'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -96,9 +96,12 @@ function esc(str: string | null | undefined): string {
 
 function renderHtmlField(html: string | null | undefined): string {
   if (!html) return ''
-  const safe = DOMPurify.sanitize(html, {
-    ADD_TAGS: ['img'],
-    ADD_ATTR: ['src', 'alt', 'title', 'width', 'height'],
+  const safe = sanitizeHtml(html, {
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
+    allowedAttributes: {
+      ...sanitizeHtml.defaults.allowedAttributes,
+      img: ['src', 'alt', 'title', 'width', 'height'],
+    },
   })
   return `<div class="html-content">${safe}</div>`
 }
