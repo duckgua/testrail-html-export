@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { extractCredentials } from '@/lib/testrail/credentials'
-import { getRun, getTests, getResultsForRun, getUsers, getCase } from '@/lib/testrail/api'
+import { getRun, getTests, getResultsForRun, getUsers, getCase, getStatuses } from '@/lib/testrail/api'
 import { generateRunHtml } from '@/lib/export/html'
 import type { Result, TestWithResult, Case } from '@/lib/testrail/types'
 import type { TestrailCredentials } from '@/lib/testrail/credentials'
@@ -46,11 +46,12 @@ export async function GET(
 
   try {
     // Fetch base data in parallel
-    const [run, tests, results, users] = await Promise.all([
+    const [run, tests, results, users, statuses] = await Promise.all([
       getRun(rid, creds),
       getTests(rid, creds),
       getResultsForRun(rid, creds),
       getUsers(creds),
+      getStatuses(creds),
     ])
 
     // Merge tests with latest results
@@ -70,11 +71,12 @@ export async function GET(
     const caseIds = testsWithResults.map((t) => t.case_id)
     const caseMap = await fetchCasesInBatches(caseIds, creds)
 
-    // Build user map
+    // Build user map and status map
     const usersMap = new Map<number, string>(users.map((u) => [u.id, u.name]))
+    const statusesMap = new Map<number, string>(statuses.map((s) => [s.id, s.label]))
 
     // Generate HTML
-    const html = await generateRunHtml({ run, testsWithResults, caseMap, usersMap, credentials: creds })
+    const html = await generateRunHtml({ run, testsWithResults, caseMap, usersMap, statusesMap, credentials: creds })
     const filename = `run-${sanitizeFilename(run.name)}.html`
 
     return new Response(html, {
