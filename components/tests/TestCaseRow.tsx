@@ -5,6 +5,8 @@ import Badge from '@/components/ui/Badge'
 import Spinner from '@/components/ui/Spinner'
 import HtmlContent from '@/components/ui/HtmlContent'
 import StepExpander from './StepExpander'
+import { useCredentials } from '@/contexts/CredentialsContext'
+import { trHeaders } from '@/lib/testrail/credentials'
 import type { TestWithResult, Case } from '@/lib/testrail/types'
 
 interface TestCaseRowProps {
@@ -13,6 +15,7 @@ interface TestCaseRowProps {
 }
 
 export default function TestCaseRow({ test, usersMap = new Map() }: TestCaseRowProps) {
+  const { credentials } = useCredentials()
   const [isExpanded, setIsExpanded] = useState(false)
   const [caseDetail, setCaseDetail] = useState<Case | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -24,7 +27,9 @@ export default function TestCaseRow({ test, usersMap = new Map() }: TestCaseRowP
       setIsLoading(true)
       setError(null)
       try {
-        const res = await fetch(`/api/testrail/cases/${test.case_id}`)
+        const res = await fetch(`/api/testrail/cases/${test.case_id}`, {
+          headers: credentials ? trHeaders(credentials) : {},
+        })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
         setCaseDetail(data)

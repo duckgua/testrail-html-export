@@ -64,6 +64,7 @@ npm run dev
 - **資料不留存**：匯出的 HTML 報告以串流方式直接下載到你的電腦，**伺服器端不保留任何 TestRail 資料**。
 - **XSS 防護**：所有來自 TestRail 的 HTML 內容在渲染前均經過 [DOMPurify](https://github.com/cure53/DOMPurify) 過濾。
 - **API 限流保護**：遇到 TestRail 回傳 `429 Too Many Requests` 時，會自動等待並重試，不會對 TestRail 伺服器造成過度請求。
+- **建議內部使用**：憑證（API Key）存於瀏覽器記憶體，並在每次 API 請求的 HTTP headers 中傳送。雖然傳輸走 HTTPS 已加密，但開啟 DevTools Network tab 的人仍可看到這些值。**建議僅部署於受信任的內部網路或個人使用，不建議對外公開部署給不特定人員使用**。
 - 本工具為非官方社群工具，與 TestRail / Gurock Software 無任何關聯。
 
 ---
